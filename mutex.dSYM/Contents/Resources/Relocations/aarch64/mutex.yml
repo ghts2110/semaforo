@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/gabriel/Desktop/2024-1-minf-0501-transito-coderhead/mutex'
+relocations:     []
+...
