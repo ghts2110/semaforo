@@ -3,7 +3,6 @@
 #include <unistd.h>
 #include <pthread.h>
 #include <stdbool.h>
-#include <semaphore.h>
 #include <dispatch/dispatch.h>
 
 char rua1[4] = {' ', ' ', ' ', ' '};
@@ -11,7 +10,7 @@ char rua2[4] = {' ', ' ', ' ', ' '};
 char compartilhado = ' ';
 
 pthread_mutex_t mutex;
-sem_t semaforo_cruzamento;
+dispatch_semaphore_t semaforo_cruzamento;
 
 int semaforo_rua1 = 1;
 int semaforo_rua2 = 0;
@@ -43,32 +42,32 @@ void *carro_rua1(void *arg) {
             if (i == 2 && !semaforo_rua1) {
                 pthread_mutex_unlock(&mutex);
                 usleep(300000);
-                i--; 
+                i--;
                 continue;
             }
 
             if (i == 2) {
                 pthread_mutex_unlock(&mutex);
-                sem_wait(&semaforo_cruzamento); 
+                dispatch_semaphore_wait(semaforo_cruzamento, DISPATCH_TIME_FOREVER);
                 pthread_mutex_lock(&mutex);
             }
 
-            if(i == 0){
+            if (i == 0) {
                 rua1[3] = ' ';
                 rua1[i] = carro;
-            }else if(i == 1){
-                rua1[i-1] = ' ';
+            } else if (i == 1) {
+                rua1[i - 1] = ' ';
                 rua1[i] = carro;
-            }else if(i == 2){
+            } else if (i == 2) {
                 rua1[i - 1] = ' ';
                 compartilhado = carro;
             } else if (i == 3) {
                 compartilhado = ' ';
-                rua1[i-1] = carro;
-                sem_post(&semaforo_cruzamento);
-            } else if (i == 4){
-                rua1[i-2] = ' ';
-                rua1[i-1] = carro;
+                rua1[i - 1] = carro;
+                dispatch_semaphore_signal(semaforo_cruzamento);
+            } else if (i == 4) {
+                rua1[i - 2] = ' ';
+                rua1[i - 1] = carro;
             }
 
             print_ruas();
@@ -93,28 +92,27 @@ void *carro_rua2(void *arg) {
             }
 
             if (i == 2) {
-                pthread_mutex_unlock(&mutex); 
-                sem_wait(&semaforo_cruzamento); 
+                pthread_mutex_unlock(&mutex);
+                dispatch_semaphore_wait(semaforo_cruzamento, DISPATCH_TIME_FOREVER);
                 pthread_mutex_lock(&mutex);
             }
 
-
-            if(i == 0){
+            if (i == 0) {
                 rua2[3] = ' ';
                 rua2[i] = carro;
-            }else if(i == 1){
-                rua2[i-1] = ' ';
+            } else if (i == 1) {
+                rua2[i - 1] = ' ';
                 rua2[i] = carro;
-            }else if(i == 2){
+            } else if (i == 2) {
                 rua2[i - 1] = ' ';
                 compartilhado = carro;
             } else if (i == 3) {
                 compartilhado = ' ';
-                rua2[i-1] = carro;
-                sem_post(&semaforo_cruzamento);
-            } else if (i == 4){
-                rua2[i-2] = ' ';
-                rua2[i-1] = carro;
+                rua2[i - 1] = carro;
+                dispatch_semaphore_signal(semaforo_cruzamento);
+            } else if (i == 4) {
+                rua2[i - 2] = ' ';
+                rua2[i - 1] = carro;
             }
 
             print_ruas();
@@ -125,12 +123,11 @@ void *carro_rua2(void *arg) {
     return NULL;
 }
 
-
 int main() {
     pthread_t carro1_thread, carro2_thread;
 
     pthread_mutex_init(&mutex, NULL);
-    sem_init(&semaforo_cruzamento, 0, 1);
+    semaforo_cruzamento = dispatch_semaphore_create(1);
 
     pthread_create(&carro1_thread, NULL, carro_rua1, NULL);
     pthread_create(&carro2_thread, NULL, carro_rua2, NULL);
@@ -143,6 +140,7 @@ int main() {
         pthread_mutex_unlock(&mutex);
     }
 
+    // dispatch semáforos não precisam de destroy
     pthread_join(carro1_thread, NULL);
     pthread_join(carro2_thread, NULL);
     return 0;
